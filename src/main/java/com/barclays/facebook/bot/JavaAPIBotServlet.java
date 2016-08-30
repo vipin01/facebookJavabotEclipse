@@ -81,6 +81,8 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 public class JavaAPIBotServlet extends HttpServlet {
 
+	private static final String PYTHON_NOT_FOUND_RESPONSE = "python_not_found_response";
+
 	private static final String QUESTION_SPLITTER = ":";
 
 	private static final String BUTTON_TMP_IDENTIFIER = "$";
@@ -113,8 +115,8 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	private static final String HELP_QUERY = "help_query";
 
+	// private static final String IMG_URL = "https://i.imgsafe.org/df4be6fe74.png";
 	private static final String IMG_URL = "https://8ff4be10.ngrok.io/facebookJavabot-0.0.1-SNAPSHOT/images/barclaycard_50_resized.jpg";
-
 	private static final String WELCOME_TXT = "welcome";
 
 	private static final String ANSWER_BUTTON = "answer_button";
@@ -219,13 +221,31 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 						if (temp == null || temp.isEmpty()) {
 
-							logger.debug("Temp is empty");
+							logger.debug("AI Response is empty");
+							String pythonResponse = null;
+							// String[] splitMessage =
+							// temp.split(QUESTION_SPLITTER);
+							// if (splitMessage.length > 1) {
 
-							String message2 = fetchQueryResponse(NONE, bundle);
+							// if
+							// (splitMessage[0].equals(BUTTON_TMP_IDENTIFIER)) {
+							try {
+								pythonResponse = speakToPythonNLP(item.getMessage().getText());
+								if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
+										.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
+									temp = pythonResponse;
+								} else {
+									String message2 = fetchQueryResponse(NONE, bundle);
+									final AIResponse aiResponse2 = gson.fromJson(message2, AIResponse.class);
+									temp = aiResponse2.getResult().getFulfillment().getSpeech();
+								}
 
-							final AIResponse aiResponse2 = gson.fromJson(message2, AIResponse.class);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 
-							temp = aiResponse2.getResult().getFulfillment().getSpeech();
+							// }
+							// }
 
 						}
 
@@ -236,11 +256,11 @@ public class JavaAPIBotServlet extends HttpServlet {
 								Version.VERSION_2_6);
 
 						try {
-							
+
 							sendClient.publish(ME_MESSAGES, GraphResponse.class, Parameter.with(RECIPIENT, recipient),
 
 									Parameter.with(MESSAGE, templateMessage));
-							
+
 						} catch (Throwable th) {
 
 							th.printStackTrace();
@@ -261,7 +281,6 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 						String link = aiResponse.getResult().getAction();
 
-						
 						if (temp == null || temp.isEmpty()) {
 
 							logger.debug("Temp is empty");
@@ -283,11 +302,10 @@ public class JavaAPIBotServlet extends HttpServlet {
 								Version.VERSION_2_6);
 
 						try {
-							
+
 							sendClient.publish(ME_MESSAGES, GraphResponse.class, Parameter.with(RECIPIENT, recipient),
 
 									Parameter.with(MESSAGE, templateMessage));
-							
 
 						} catch (Throwable th) {
 
@@ -345,8 +363,6 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 		GenericTemplatePayload genericPayload = null;
 
-		ButtonTemplatePayload genericButtonPayload = null;
-
 		TemplateAttachment template = null;
 
 		Message message = null;
@@ -358,12 +374,11 @@ public class JavaAPIBotServlet extends HttpServlet {
 			if (splitMessage[0].equals(BUTTON_TMP_IDENTIFIER)) {
 
 				ButtonTemplatePayload payload = new ButtonTemplatePayload();
-				
 				payload.setText(splitMessage[1]);
-				
+
 				logger.debug("Heading Text " + splitMessage[1]);
 
-				//payload.setText(factory.getString(HELP_QUERY));
+				// payload.setText(factory.getString(HELP_QUERY));
 
 				int length = splitMessage.length;
 
@@ -430,25 +445,42 @@ public class JavaAPIBotServlet extends HttpServlet {
 		return message;
 
 	}
-	
-	public static void pythonCode(){
-		
-		try {
-			String s = "crade";
-			int number1 = 564;
-			int number2 = 32;
 
-			ProcessBuilder pb = new ProcessBuilder("python", "chat_bot_nlp_combined.py", ""+s,"");
-			Process p = pb.start();
+	private String speakToPythonNLP(String userMessage) throws IOException {
+		logger.info("Request to Python is : " + userMessage);
+		ProcessBuilder pb = new ProcessBuilder("python3", "/opt/bitnami/pyfiles/chat_bot_nlp_combined.py",
+				"" + userMessage, "");
+		/*
+		 * ProcessBuilder pb = new ProcessBuilder("python",
+		 * "F:/chatbotworkspace/facebookJavabot/chat_bot_nlp_combined.py", "" +
+		 * userMessage, "");
+		 */
+		Process p = pb.start();
 
-			BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
-			// int ret = new Integer(in.readLine()).intValue();
-			System.out.println("value is : " + in.readLine());
-		}
-		
-		catch (Exception e) {
-			System.out.println(e);
-			}
+		BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+		// int ret = new Integer(in.readLine()).intValue();
+		String response = in.readLine();
+		logger.info("Python response is : " + response);
+		return response;
 
 	}
+
+	/*
+	 * public void pythonCode(){
+	 * 
+	 * try { String s = "crade"; int number1 = 564; int number2 = 32;
+	 * 
+	 * ProcessBuilder pb = new ProcessBuilder("python", "test1.py", ""+s,"");
+	 * Process p = pb.start();
+	 * 
+	 * BufferedReader in = new BufferedReader(new
+	 * InputStreamReader(p.getInputStream())); // int ret = new
+	 * Integer(in.readLine()).intValue(); System.out.println("value is : " +
+	 * in.readLine()); }
+	 * 
+	 * catch (Exception e) { System.out.println(e); }
+	 * 
+	 * }
+	 */
 }
