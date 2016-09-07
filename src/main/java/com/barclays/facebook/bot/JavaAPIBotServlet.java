@@ -77,8 +77,6 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
-//@WebServlet(name = "/webhook", urlPatterns = { "/webhook" })
-
 public class JavaAPIBotServlet extends HttpServlet {
 
 	private static final String PYTHON_NOT_FOUND_RESPONSE = "python_not_found_response";
@@ -115,7 +113,7 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	private static final String HELP_QUERY = "help_query";
 
-	// private static final String IMG_URL = "https://i.imgsafe.org/df4be6fe74.png";
+	// private static final String IMG_URL = "https://absabankbot.herokuapp.com/images/absa.png";
 	private static final String IMG_URL = "https://8ff4be10.ngrok.io/facebookJavabot-0.0.1-SNAPSHOT/images/barclaycard_50_resized.jpg";
 	private static final String WELCOME_TXT = "welcome";
 
@@ -124,6 +122,8 @@ public class JavaAPIBotServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	private static final Logger logger = LoggerFactory.getLogger(JavaAPIBotServlet.class);
+
+	private static final String PY_LOCATION = "py_file_location";
 
 	@Override
 
@@ -134,16 +134,6 @@ public class JavaAPIBotServlet extends HttpServlet {
 		logger.debug("inside doGet() method");
 
 		logger.debug("ServletPath " + request.getServletPath());
-
-		/*
-		 * 
-		 * MessengerFactory factory =
-		 * 
-		 * BotFactory.getMessengerFactory(request.getServletPath()); String
-		 * 
-		 * verifyToken = factory.getVerifyToken();
-		 * 
-		 */
 
 		ResourceBundle bundle = BotFactory.getBotPropertiesPerCountry(request.getServletPath());
 
@@ -172,10 +162,6 @@ public class JavaAPIBotServlet extends HttpServlet {
 		String body = request.getReader().lines().reduce("", (accumulator, actual) -> accumulator + actual);
 
 		logger.debug("In doPost ServletPath " + request.getServletPath());
-
-		// MessengerFactory
-
-		// factory=BotFactory.getMessengerFactory(request.getServletPath());
 
 		ResourceBundle bundle = BotFactory.getBotPropertiesPerCountry(request.getServletPath());
 
@@ -223,14 +209,8 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 							logger.debug("AI Response is empty");
 							String pythonResponse = null;
-							// String[] splitMessage =
-							// temp.split(QUESTION_SPLITTER);
-							// if (splitMessage.length > 1) {
-
-							// if
-							// (splitMessage[0].equals(BUTTON_TMP_IDENTIFIER)) {
 							try {
-								pythonResponse = speakToPythonNLP(item.getMessage().getText());
+								pythonResponse = speakToPythonNLP(item.getMessage().getText(),bundle);
 								if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
 										.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
 									temp = pythonResponse;
@@ -446,9 +426,10 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	}
 
-	private String speakToPythonNLP(String userMessage) throws IOException {
+	private String speakToPythonNLP(String userMessage,ResourceBundle factory) throws IOException {
 		logger.info("Request to Python is : " + userMessage);
-		ProcessBuilder pb = new ProcessBuilder("python3", "/opt/bitnami/pyfiles/chat_bot_nlp_combined.py",
+		String pyFileLoction=factory.getString(PY_LOCATION);
+		ProcessBuilder pb = new ProcessBuilder("python3", pyFileLoction,
 				"" + userMessage, "");
 		/*
 		 * ProcessBuilder pb = new ProcessBuilder("python",
@@ -466,21 +447,5 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	}
 
-	/*
-	 * public void pythonCode(){
-	 * 
-	 * try { String s = "crade"; int number1 = 564; int number2 = 32;
-	 * 
-	 * ProcessBuilder pb = new ProcessBuilder("python", "test1.py", ""+s,"");
-	 * Process p = pb.start();
-	 * 
-	 * BufferedReader in = new BufferedReader(new
-	 * InputStreamReader(p.getInputStream())); // int ret = new
-	 * Integer(in.readLine()).intValue(); System.out.println("value is : " +
-	 * in.readLine()); }
-	 * 
-	 * catch (Exception e) { System.out.println(e); }
-	 * 
-	 * }
-	 */
+
 }
