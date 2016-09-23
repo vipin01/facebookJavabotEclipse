@@ -5,13 +5,10 @@ Created on Wed Aug 24 17:10:50 2016
 @author: Vipin
 """
 
-import nltk
-
 from nltk import word_tokenize, pos_tag
-
 from nltk.corpus import stopwords
-
 from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.corpus import wordnet as wn
 
 from collections import Counter
 from math import sqrt,ceil
@@ -19,28 +16,42 @@ import re
 
 import csv
 import sys
+import pickle
 
-sent=list()
-ifile  = open('/opt/bitnami/pyfiles/ques1.csv', "r", encoding = "ISO-8859-1")
-#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ques1.csv', "r")
+sent=[]
+ifile  = open('/opt/bitnami/pyfiles/ques_uk.csv', "r", encoding = "ISO-8859-1")
+#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ques_uk.csv', "r")
 read = csv.reader(ifile)
 for row in read :
     sent.append(row[0])
+ifile.close()
 
-ans=list()
-ifile  = open('/opt/bitnami/pyfiles/ans1.csv', "r", encoding = "ISO-8859-1")
-#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ans1.csv', "r")
+ans=[]
+ifile  = open('/opt/bitnami/pyfiles/ans_uk.csv', "r", encoding = "ISO-8859-1")
+#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ans_uk.csv', "r")
 read = csv.reader(ifile)
 for row in read :
     ans.append(row[0])
+ifile.close()
 
-#print("Hello World from Python")
-#print(sys.argv[1])
+def sim(word1, word2, lch_threshold=3):
+    results = []
+    for net1 in wn.synsets(word1):
+        for net2 in wn.synsets(word2):
+            try:
+                lch = net1.lch_similarity(net2)
+            except:
+                continue
+           
+            try:
+                if lch >= lch_threshold:
+                    results.append((net1, net2))
+            except:
+                continue
+            
+    if not results: return False
+    return True
 
-#import platform
-#print(platform.python_version())
-
- 
 def filter_tokens(input):
     # replace all apostrophe with blank
     tokens=re.sub('[^A-Za-z0-9]+'," ",input)    
@@ -66,7 +77,6 @@ def filter_tokens(input):
     return tokens
 
 
-
 def word2vec(word):
     # count the characters in word
     cw = Counter(word)
@@ -83,32 +93,41 @@ def cosdis(v1, v2):
     # by definition of cosine distance we have
     return sum(v1[0][ch]*v2[0][ch] for ch in common)/v1[2]/v2[2]    
   
-      
-# build keyword dictionary with the existing data        
-key_words_list=[filter_tokens(test) for test in sent]
+
+# read keyword dictionary from disk
+#key_words_list= pickle.load(open("C:/Users/Vipin/Desktop/chatBot/ukKeywordsPickle",'rb'))
+key_words_list= pickle.load(open("/opt/bitnami/pyfiles/ukKeywordsPickle",'rb'))
+
+#keywordsDict = pickle.load(open("C:/Users/Vipin/Desktop/chatBot/ukKeywordsDict",'rb'))
+keywordsDict = pickle.load(open("/opt/bitnami/pyfiles/ukKeywordsDict",'rb'))
 
 # input string
-input_str= sys.argv[1] 
+input_str= sys.argv[1]
 #input_str= "I'm considering appointing a Debt Management Company what should I do?"
 
 # extract all important tokens from the input
 input_tokens=filter_tokens(input_str)
 
-score_it_kw=list()    
-max_score_it_kw=list()
-score=list()
+for i in range(len(input_tokens)):
+    if input_tokens[i] not in keywordsDict: 
+        for j in keywordsDict:
+            if(sim(input_tokens[i],j)): input_tokens[i]= j
+
+score_it_kw=[]
+max_score_it_kw=[]
+score=[]
 for key_words_list_index in range(len(key_words_list)):
     for key_words in key_words_list[key_words_list_index]:
         for input_tokens_word in input_tokens:
             va=word2vec(input_tokens_word)
-            vb=word2vec(key_words) 
+            vb=word2vec(key_words)
             score_it_kw.append(ceil(cosdis(va,vb)*100)/100)
         max_score_it_kw.append(max(score_it_kw))
-        score_it_kw=list()
+        score_it_kw=[]
     score.append(sum(max_score_it_kw)/len(key_words_list[key_words_list_index]))
-    max_score_it_kw=list()
+    max_score_it_kw=[]
               
-if max(score)>=0.8 :    
+if max(score)>=0.85 :
     print("If you are looking for '"+sent[score.index(max(score))]+"', please visit "+ans[score.index(max(score))])
     #print(ans[score.index(max(score))])
 else :
