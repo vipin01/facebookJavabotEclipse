@@ -19,16 +19,16 @@ import sys
 import pickle
 
 sent=[]
-ifile  = open('/opt/bitnami/pyfiles/ques_uk.csv', "r", encoding = "ISO-8859-1")
-#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ques_uk.csv', "r")
+#ifile  = open('/opt/bitnami/pyfiles/ques_us.csv', "r", encoding = "ISO-8859-1")
+ifile  = open('C:/Users/Vipin/Desktop/chatBot/ques_us.csv', "r", encoding = "ISO-8859-1")
 read = csv.reader(ifile)
 for row in read :
     sent.append(row[0])
 ifile.close()
 
 ans=[]
-ifile  = open('/opt/bitnami/pyfiles/ans_uk.csv', "r", encoding = "ISO-8859-1")
-#ifile  = open('C:/Users/Vipin/Desktop/chatBot/ans_uk.csv', "r")
+#ifile  = open('/opt/bitnami/pyfiles/ans_us.csv', "r", encoding = "ISO-8859-1")
+ifile  = open('C:/Users/Vipin/Desktop/chatBot/ans_us.csv', "r", encoding = "ISO-8859-1")
 read = csv.reader(ifile)
 for row in read :
     ans.append(row[0])
@@ -95,15 +95,14 @@ def cosdis(v1, v2):
   
 
 # read keyword dictionary from disk
-#key_words_list= pickle.load(open("C:/Users/Vipin/Desktop/chatBot/ukKeywordsPickle",'rb'))
-key_words_list= pickle.load(open("/opt/bitnami/pyfiles/ukKeywordsPickle",'rb'))
+key_words_list= pickle.load(open("C:/Users/Vipin/Desktop/chatBot/usKeywordsPickle",'rb'))
+#key_words_list= pickle.load(open("/opt/bitnami/pyfiles/usKeywordsPickle",'rb'))
 
-#keywordsDict = pickle.load(open("C:/Users/Vipin/Desktop/chatBot/ukKeywordsDict",'rb'))
-keywordsDict = pickle.load(open("/opt/bitnami/pyfiles/ukKeywordsDict",'rb'))
+keywordsDict = pickle.load(open("C:/Users/Vipin/Desktop/chatBot/usKeywordsDict",'rb'))
 
 # input string
 input_str= sys.argv[1]
-#input_str= "I'm considering appointing a Debt Management Company what should I do?"
+#input_str= "How can I get cash from my card if I need it?"
 
 # extract all important tokens from the input
 input_tokens=filter_tokens(input_str)
