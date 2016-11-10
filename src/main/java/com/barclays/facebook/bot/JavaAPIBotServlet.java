@@ -205,7 +205,7 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 						}
 
-						if (temp == null || temp.isEmpty()) {
+						if(link.equalsIgnoreCase("input.unknown")) {
 
 							logger.debug("AI Response is empty");
 							String pythonResponse = null;
@@ -214,10 +214,6 @@ public class JavaAPIBotServlet extends HttpServlet {
 								if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
 										.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
 									temp = pythonResponse;
-								} else {
-									String message2 = fetchQueryResponse(NONE, bundle);
-									final AIResponse aiResponse2 = gson.fromJson(message2, AIResponse.class);
-									temp = aiResponse2.getResult().getFulfillment().getSpeech();
 								}
 
 							} catch (Exception e) {
@@ -227,6 +223,10 @@ public class JavaAPIBotServlet extends HttpServlet {
 							// }
 							// }
 
+						}
+						
+						if (temp == null || temp.isEmpty()) {
+							temp = bundle.getString(HELP_QUERY);
 						}
 
 						Message templateMessage = getTemplateMessage(temp, link, bundle);
