@@ -72,12 +72,14 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 
 import com.sun.jersey.api.client.WebResource;
-
+import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 public class JavaAPIBotServlet extends HttpServlet {
+
+	private static final String UNDER_MAINTENANCE = "Under Maintenance";
 
 	private static final String PYTHON_NOT_FOUND_RESPONSE = "python_not_found_response";
 
@@ -113,7 +115,14 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	private static final String HELP_QUERY = "help_query";
 
-	// private static final String IMG_URL = "https://absabankbot.herokuapp.com/images/absa.png";
+	private static final String BACKENDDOWN = "backEndDown";
+	
+	private static final String READTIMEOUT = "readTimeout";
+	
+	private static final String CONNECTTIMEOUT = "connectTimeout";
+
+	// private static final String IMG_URL =
+	// "https://absabankbot.herokuapp.com/images/absa.png";
 	private static final String IMG_URL = "https://8ff4be10.ngrok.io/facebookJavabot-0.0.1-SNAPSHOT/images/barclaycard_50_resized.jpg";
 	private static final String WELCOME_TXT = "welcome";
 
@@ -186,45 +195,48 @@ public class JavaAPIBotServlet extends HttpServlet {
 					// check message
 
 					if (item.getMessage() != null && item.getMessage().getText() != null) {
-
-						String message = fetchQueryResponse(item.getMessage().getText(), bundle);
-
-						final Gson gson = GsonFactory.getGson();
-
-						final AIResponse aiResponse = gson.fromJson(message, AIResponse.class);
-
 						String temp = null;
 
 						String link = null;
 
-						if (aiResponse.getResult() != null) {
+						String message = fetchQueryResponse(item.getMessage().getText(), bundle);
 
-							temp = aiResponse.getResult().getFulfillment().getSpeech();
+						if (message.equalsIgnoreCase(UNDER_MAINTENANCE)) {
+							temp = bundle.getString(BACKENDDOWN);
+						} else {
 
-							link = aiResponse.getResult().getAction();
+							final Gson gson = GsonFactory.getGson();
 
-						}
+							final AIResponse aiResponse = gson.fromJson(message, AIResponse.class);
 
-						if(link.equalsIgnoreCase("input.unknown")) {
+							if (aiResponse.getResult() != null) {
 
-							logger.debug("AI Response is empty");
-							String pythonResponse = null;
-							try {
-								pythonResponse = speakToPythonNLP(item.getMessage().getText(),bundle);
-								if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
-										.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
-									temp = pythonResponse;
-								}
+								temp = aiResponse.getResult().getFulfillment().getSpeech();
 
-							} catch (Exception e) {
-								e.printStackTrace();
+								link = aiResponse.getResult().getAction();
+
 							}
 
-							// }
-							// }
+							if (link.equalsIgnoreCase("input.unknown")) {
 
+								logger.debug("AI Response is empty");
+								String pythonResponse = null;
+								try {
+									pythonResponse = speakToPythonNLP(item.getMessage().getText(), bundle);
+									if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
+											.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
+										temp = pythonResponse;
+									}
+
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+
+								// }
+								// }
+
+							}
 						}
-						
 						if (temp == null || temp.isEmpty()) {
 							temp = bundle.getString(HELP_QUERY);
 						}
@@ -260,20 +272,27 @@ public class JavaAPIBotServlet extends HttpServlet {
 						String temp = aiResponse.getResult().getFulfillment().getSpeech();
 
 						String link = aiResponse.getResult().getAction();
+						
+						if (link.equalsIgnoreCase("input.unknown")) {
 
-						if (temp == null || temp.isEmpty()) {
+							logger.debug("AI Response is empty");
+							String pythonResponse = null;
+							try {
+								pythonResponse = speakToPythonNLP(item.getMessage().getText(), bundle);
+								if (pythonResponse != null && pythonResponse.length() > 0 && !(pythonResponse
+										.equalsIgnoreCase(bundle.getString(PYTHON_NOT_FOUND_RESPONSE)))) {
+									temp = pythonResponse;
+								}
 
-							logger.debug("Temp is empty");
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 
-							String message2 = fetchQueryResponse(NONE, bundle);
-
-							final AIResponse aiResponse2 = gson.fromJson(message2, AIResponse.class);
-
-							temp = aiResponse2.getResult().getFulfillment().getSpeech();
-
-							link = aiResponse2.getResult().getAction();
-
-						}
+					}
+					
+					if (temp == null || temp.isEmpty()) {
+						temp = bundle.getString(HELP_QUERY);
+					}
 
 						Message templateMessage = getTemplateMessage(temp, link, bundle);
 
@@ -308,6 +327,8 @@ public class JavaAPIBotServlet extends HttpServlet {
 		String url = "https://api.api.ai/v1/query";
 
 		Client client = Client.create(new DefaultClientConfig());
+		client.setReadTimeout(Integer.parseInt(factory.getString(READTIMEOUT)));
+		client.setConnectTimeout(Integer.parseInt(factory.getString(CONNECTTIMEOUT)));
 
 		MultivaluedMap queryParams = new MultivaluedMapImpl();
 
@@ -330,9 +351,16 @@ public class JavaAPIBotServlet extends HttpServlet {
 		ClientResponse response = builder.get(ClientResponse.class);
 
 		logger.debug("Response is " + response.toString());
+		String entity = null;
 
-		String entity = response.getEntity(String.class);
+		if (response.getStatus() != 200) {
+			entity = UNDER_MAINTENANCE;
 
+		} else {
+
+			entity = response.getEntity(String.class);
+
+		}
 		logger.debug("Response data is : " + entity);
 
 		return entity;
@@ -426,11 +454,10 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	}
 
-	private String speakToPythonNLP(String userMessage,ResourceBundle factory) throws IOException {
+	private String speakToPythonNLP(String userMessage, ResourceBundle factory) throws IOException {
 		logger.info("Request to Python is : " + userMessage);
-		String pyFileLoction=factory.getString(PY_LOCATION);
-		ProcessBuilder pb = new ProcessBuilder("python3", pyFileLoction,
-				"" + userMessage, "");
+		String pyFileLoction = factory.getString(PY_LOCATION);
+		ProcessBuilder pb = new ProcessBuilder("python3", pyFileLoction, "" + userMessage, "");
 		/*
 		 * ProcessBuilder pb = new ProcessBuilder("python",
 		 * "F:/chatbotworkspace/facebookJavabot/chat_bot_nlp_combined.py", "" +
@@ -446,6 +473,5 @@ public class JavaAPIBotServlet extends HttpServlet {
 		return response;
 
 	}
-
 
 }
