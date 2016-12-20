@@ -123,7 +123,7 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 	// private static final String IMG_URL =
 	// "https://absabankbot.herokuapp.com/images/absa.png";
-	private static final String IMG_URL = "https://8ff4be10.ngrok.io/facebookJavabot-0.0.1-SNAPSHOT/images/barclaycard_50_resized.jpg";
+	private static final String IMG_URL = "img_url";
 	private static final String WELCOME_TXT = "welcome";
 
 	private static final String ANSWER_BUTTON = "answer_button";
@@ -264,14 +264,22 @@ public class JavaAPIBotServlet extends HttpServlet {
 					if (item.getPostback() != null) {
 
 						String message = fetchQueryResponse(item.getPostback().getPayload(), bundle);
+						
+						String temp = null;
+
+						String link = null;
+						
+						if (message.equalsIgnoreCase(UNDER_MAINTENANCE)) {
+							temp = bundle.getString(BACKENDDOWN);
+						} else {
 
 						final Gson gson = GsonFactory.getGson();
 
 						final AIResponse aiResponse = gson.fromJson(message, AIResponse.class);
 
-						String temp = aiResponse.getResult().getFulfillment().getSpeech();
+						temp = aiResponse.getResult().getFulfillment().getSpeech();
 
-						String link = aiResponse.getResult().getAction();
+						link = aiResponse.getResult().getAction();
 						
 						if (link.equalsIgnoreCase("input.unknown")) {
 
@@ -287,6 +295,8 @@ public class JavaAPIBotServlet extends HttpServlet {
 							} catch (Exception e) {
 								e.printStackTrace();
 							}
+							
+						}
 
 					}
 					
@@ -323,6 +333,10 @@ public class JavaAPIBotServlet extends HttpServlet {
 	}
 
 	public String fetchQueryResponse(String query, ResourceBundle factory) {
+		
+		String entity = null;
+		
+		try {
 
 		String url = "https://api.api.ai/v1/query";
 
@@ -351,8 +365,7 @@ public class JavaAPIBotServlet extends HttpServlet {
 		ClientResponse response = builder.get(ClientResponse.class);
 
 		logger.debug("Response is " + response.toString());
-		String entity = null;
-
+		
 		if (response.getStatus() != 200) {
 			entity = UNDER_MAINTENANCE;
 
@@ -363,8 +376,15 @@ public class JavaAPIBotServlet extends HttpServlet {
 		}
 		logger.debug("Response data is : " + entity);
 
-		return entity;
 
+	}
+		catch(Exception e){		
+			e.printStackTrace();
+			entity = UNDER_MAINTENANCE;
+		
+		}
+		
+		return entity;
 	}
 
 	public Message getTemplateMessage(String textMessage, String link, ResourceBundle factory) {
@@ -418,7 +438,7 @@ public class JavaAPIBotServlet extends HttpServlet {
 
 					Bubble bubble = new Bubble(factory.getString(WELCOME_TXT));
 
-					bubble.setImageUrl(IMG_URL);
+					bubble.setImageUrl(factory.getString(IMG_URL));
 
 					// bubble.setImageUrl("http://53bde1b4.ngrok.io/facebookJavabot-0.0.1-SNAPSHOT/images/barclaycard_logo.png");
 
